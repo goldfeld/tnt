@@ -32,7 +32,15 @@ if exists('g:loaded_tnt') || &cp
 endif
 let g:loaded_tnt = 1
 
-autocmd BufRead,BufNewFile *.tnt.* call outliner#init()
+augroup TNT
+  autocmd!
+  autocmd BufRead,BufNewFile *.tnt.* call outliner#autocmds()
+  " temporarily switch to manual folding when entering insert mode,
+  " so that adjacent folds won't inaverdtently open when we create new folds.
+  autocmd InsertEnter *.tnt.* let w:last_fm=&foldmethod
+    \ | setlocal foldmethod=manual
+  autocmd InsertLeave *.tnt.* let &l:foldmethod=w:last_fm
+augroup END
 
 nnoremap <silent> <Space>w :TNTTriggerSession<CR>
 nnoremap <silent> <Space>W :TNTCreateWebpage<CR>

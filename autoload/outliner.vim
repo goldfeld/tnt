@@ -3,9 +3,6 @@
 "" License:       see /plugin/tnt.vim
 "" =============================================================================
 
-function! outliner#init()
-endfunction
-
 function! outliner#goPreviousSibling()
   let column = getpos('.')[2]
   let heading = IndentLevel(line('.'))
@@ -35,7 +32,7 @@ function! outliner#goFirstLower(direction)
   let current = line('.')
   let currentindent = IndentLevel(current)
   while currentindent <= startindent
-    \ || matchstr(getline(current), g:tntWebpageRegex) != ''
+    \ || matchstr(getline(current), s:webpageRegex) != ''
     if currentindent < startindent | return | endif
     execute 'normal! ' . a:direction
     let l:current = line('.')
@@ -145,7 +142,7 @@ endfunction
 let expr = '\(^fun\S* \)\@<=[^f][^u][^n]\w\+\<Bar>^\w\+'
 execute "nnoremap <Leader>f ?".expr."<CR>"
 
-let g:tntWebpageRegex = '^\s*\((\d\d\d\?%)\)\?'
+let s:webpageRegex = '^\s*\((\d\d\d\?%)\)\?'
   \ . '\[[^\]]*\]\[[^\]]*\]'
   \ . '\s*\({>>\d*<<}\)\?\s*$'
 
@@ -157,7 +154,7 @@ function! outliner#triggerSession(lnum)
       \ . "let g:TNTWebBrowser = 'google-chrome'" . '" in your vimrc.'
     return
   endif
-  let webpages = outliner#children(a:lnum, g:tntWebpageRegex)
+  let webpages = outliner#children(a:lnum, s:webpageRegex)
   if !len(webpages) | return | endif
   let links = ''
   for page in webpages
@@ -167,7 +164,7 @@ function! outliner#triggerSession(lnum)
   call system(browser.l:links)
 endfunction
 
-let g:TNTFoldCache = {}
+let s:foldCache = {}
 function! outliner#foldText(...)
   if a:0 == 1 | let current = a:1
   else | let current = v:foldstart
@@ -198,7 +195,7 @@ function! outliner#foldText(...)
 
   " a randomizer thread begins with a percent sign (whatever else does?)
   elseif l:line =~? '^\s*%'
-    let label = get(g:outliner#foldCache, l:current, '')
+    let label = get(s:foldCache, l:current, '')
     if l:label == ''
       let children = outliner#children(l:current)
       let number = strpart(outliner#timestamp(), 5)
@@ -207,7 +204,7 @@ function! outliner#foldText(...)
       let child = l:children[random]
 
       let label = strpart(outliner#foldText(child), 2)
-      let g:TNTFoldCache[l:current] = l:label
+      let s:foldCache[l:current] = l:label
     endif
     return l:label
   
@@ -227,27 +224,17 @@ function! outliner#wordCount(lnum)
 endfunction
 
 function! outliner#wordCountRecursive(lnum)
-  let wc = get(g:TNTFoldCache, a:lnum, 0)
+  let wc = get(s:foldCache, a:lnum, 0)
   if l:wc == 0
     let children = outliner#children(a:lnum)
     for child in children
       let l:wc += outliner#wordCountRecursive(child)
     endfor
     let l:wc += outliner#wordCount(a:lnum)
-    let g:TNTFoldCache[a:lnum] = l:wc
+    let s:foldCache[a:lnum] = l:wc
   endif
   return l:wc
 endfunction
-
-augroup TNT
-  autocmd!
-  autocmd BufRead,BufNewFile *.tnt.* call outliner#autocmds()
-  " temporarily switch to manual folding when entering insert mode,
-  " so that adjacent folds won't inaverdtently open when we create new folds.
-  autocmd InsertEnter *.tnt.* let w:last_fm=&foldmethod
-    \ | setlocal foldmethod=manual
-  autocmd InsertLeave *.tnt.* let &l:foldmethod=w:last_fm
-augroup END
 
 function! outliner#autocmds()
   setlocal foldmethod=expr
