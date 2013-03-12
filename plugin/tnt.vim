@@ -43,7 +43,11 @@ augroup TNT
 augroup END
 
 nnoremap <silent> <Space>w :TNTTriggerSession<CR>
+command! -nargs=0 TNTTriggerSession call outliner#triggerSession(line('.'))
+
 nnoremap <silent> <Space>W :TNTCreateWebpage<CR>
+command! -nargs=0 TNTCreateWebpage call outliner#createWebpage()
+
 nnoremap <silent> <Space>mt :execute "normal! a{>>". outliner#timestamp() ."<<}"<CR>
 nnoremap <silent> <Space>t :echo 'cmd-t for folds'<CR>
 

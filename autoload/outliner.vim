@@ -5,11 +5,11 @@
 
 function! outliner#goPreviousSibling()
   let column = getpos('.')[2]
-  let heading = IndentLevel(line('.'))
+  let heading = outliner#indentLevel(line('.'))
   execute 'normal! k'
   let prev = line('.')
-  if IndentLevel(prev) != heading || foldclosed(prev) == -1
-    while IndentLevel(line('.')) > heading
+  if outliner#indentLevel(prev) != heading || foldclosed(prev) == -1
+    while outliner#indentLevel(line('.')) > heading
       execute 'normal! [z'
     endwhile
     execute 'normal! '.column.'|'
@@ -21,28 +21,28 @@ function! outliner#goNextSibling()
   let current = line('.')
   execute 'normal! j'
   let next = line('.')
-  if IndentLevel(next) > IndentLevel(current)
+  if outliner#indentLevel(next) > outliner#indentLevel(current)
     execute 'normal! ]zj'
   endif
 endfunction
 
 function! outliner#goFirstLower(direction)
-  let startindent = IndentLevel(line('.'))
+  let startindent = outliner#indentLevel(line('.'))
   execute 'normal! ' . a:direction
   let current = line('.')
-  let currentindent = IndentLevel(current)
+  let currentindent = outliner#indentLevel(current)
   while currentindent <= startindent
     \ || matchstr(getline(current), s:webpageRegex) != ''
     if currentindent < startindent | return | endif
     execute 'normal! ' . a:direction
     let l:current = line('.')
-    let l:currentindent = IndentLevel(current)
+    let l:currentindent = outliner#indentLevel(current)
   endwhile
 endfunction
 
 function! outliner#goTopLevelHeading(upto)
   echo a:upto
-  while IndentLevel(line('.')) > a:upto
+  while outliner#indentLevel(line('.')) > a:upto
     execute 'normal! [z'
   endwhile
 endfunction
@@ -78,10 +78,10 @@ function! outliner#timestampI(cmd)
 endfunction
 
 " code from Vim The Hard Way
-function! IndentLevel(lnum)
+function! outliner#indentLevel(lnum)
   return indent(a:lnum) / &shiftwidth
 endfunction
-function! NextNonBlankLine(lnum)
+function! outliner#nextNonBlankLine(lnum)
   let numlines = line('$')
   let current = a:lnum + 1
   while current <= numlines
@@ -93,8 +93,8 @@ endfunction
 
 function! outliner#foldExpr(lnum)
   if getline(a:lnum) =~? '\v^\s*$' | return -1 | endif
-  let this_indent = IndentLevel(a:lnum)
-  let next_indent = IndentLevel(NextNonBlankLine(a:lnum))
+  let this_indent = outliner#indentLevel(a:lnum)
+  let next_indent = outliner#indentLevel(outliner#nextNonBlankLine(a:lnum))
   if next_indent == this_indent | return this_indent
   elseif next_indent < this_indent | return this_indent
   elseif next_indent > this_indent | return '>' . next_indent
@@ -107,15 +107,15 @@ function! outliner#children(...)
   if a:0 == 2 | let l:filter = a:2 | endif
   let l:lnum = a:1
 
-  let parent = IndentLevel(l:lnum)
+  let parent = outliner#indentLevel(l:lnum)
   let i = 1
-  let indent = IndentLevel(l:lnum + i)
+  let indent = outliner#indentLevel(l:lnum + i)
   let children = []
   if l:filter == ''
     while indent > parent
       if indent == parent + 1 | call add(children, l:lnum + i) | endif
       let i = i + 1
-      let indent = IndentLevel(l:lnum + i)
+      let indent = outliner#indentLevel(l:lnum + i)
     endwhile
 
   else
@@ -126,7 +126,7 @@ function! outliner#children(...)
         endif
       endif
       let i = i + 1
-      let indent = IndentLevel(l:lnum + i)
+      let indent = outliner#indentLevel(l:lnum + i)
     endwhile
   endif
   return l:children
@@ -142,7 +142,6 @@ let s:webpageRegex = '^\s*\((\d\d\d\?%)\)\?'
   \ . '\[[^\]]*\]\[[^\]]*\]'
   \ . '\s*\({>>\d*<<}\)\?\s*$'
 
-command! -nargs=0 TNTTriggerSession call outliner#triggerSession(line('.'))
 function! outliner#triggerSession(lnum)
   let browser = get(g:, 'TNTWebBrowser', '')
   if !len(browser)
@@ -242,7 +241,6 @@ function! outliner#autocmds()
   "inoremap <silent> <buffer> <CR> :call outliner#timestampI("\<CR>")<CR>
 endfunction
 
-command! -nargs=0 TNTCreateWebpage call outliner#createWebpage()
 function! outliner#createWebpage()
   " get curront column
   let cursor = getpos('.')[2]
