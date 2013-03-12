@@ -3,6 +3,9 @@
 "" License:       see /plugin/tnt.vim
 "" =============================================================================
 
+function! outliner#init()
+endfunction
+
 function! outliner#goPreviousSibling()
   let column = getpos('.')[2]
   let heading = IndentLevel(line('.'))
