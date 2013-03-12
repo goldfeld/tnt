@@ -138,10 +138,6 @@ function! outliner#humanDate(line)
   return substitute(a:line, '{>>\([^<]*\)<<}\s*$', '\=submatch(0)')
 endfunction
 
-" go to the function name from within a function
-let expr = '\(^fun\S* \)\@<=[^f][^u][^n]\w\+\<Bar>^\w\+'
-execute "nnoremap <Leader>f ?".expr."<CR>"
-
 let s:webpageRegex = '^\s*\((\d\d\d\?%)\)\?'
   \ . '\[[^\]]*\]\[[^\]]*\]'
   \ . '\s*\({>>\d*<<}\)\?\s*$'
