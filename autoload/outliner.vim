@@ -159,7 +159,6 @@ function! outliner#triggerSession(lnum)
   call system(browser.l:links)
 endfunction
 
-let s:foldCache = {}
 function! outliner#foldText(...)
   if a:0 == 1 | let current = a:1
   else | let current = v:foldstart
@@ -190,7 +189,7 @@ function! outliner#foldText(...)
 
   " a randomizer thread begins with a percent sign (whatever else does?)
   elseif l:line =~? '^\s*%'
-    let label = get(s:foldCache, l:current, '')
+    let label = get(b:TNTFoldCache, l:current, '')
     if l:label == ''
       let children = outliner#children(l:current)
       let number = strpart(outliner#timestamp(), 5)
@@ -199,7 +198,7 @@ function! outliner#foldText(...)
       let child = l:children[random]
 
       let label = strpart(outliner#foldText(child), 2)
-      let s:foldCache[l:current] = l:label
+      let b:TNTFoldCache[l:current] = l:label
     endif
     return l:label
   
@@ -219,19 +218,20 @@ function! outliner#wordCount(lnum)
 endfunction
 
 function! outliner#wordCountRecursive(lnum)
-  let wc = get(s:foldCache, a:lnum, 0)
+  let wc = get(b:TNTFoldCache, a:lnum, 0)
   if l:wc == 0
     let children = outliner#children(a:lnum)
     for child in children
       let l:wc += outliner#wordCountRecursive(child)
     endfor
     let l:wc += outliner#wordCount(a:lnum)
-    let s:foldCache[a:lnum] = l:wc
+    let b:TNTFoldCache[a:lnum] = l:wc
   endif
   return l:wc
 endfunction
 
 function! outliner#autocmds()
+  let b:TNTFoldCache = {}
   setlocal foldmethod=expr
   setlocal foldexpr=outliner#foldExpr(v:lnum)
   setlocal foldtext=outliner#foldText()
