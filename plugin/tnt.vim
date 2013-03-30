@@ -72,6 +72,11 @@ noremap <silent> <Space>H :<C-U>call outliner#goTopLevelHeading(v:count)<CR>
 " go back to find the first heading of a lower level than the current.
 noremap <silent> <Space>L :call outliner#goFirstLower('k')<CR>
 
+" close current subtree's heading
+noremap <silent> <Space>c [zzc
+" close 0th-level heading of current fold, or nth-level with a count.
+noremap <silent> <Space>C :<C-U>call outliner#goTopLevelHeading(v:count)<CR>zc
+
 " insert a new parent for the current item. 
 "nnoremap <silent> <Space>i
 " insert a new absolute parent for the current item, given a count.
