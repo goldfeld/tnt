@@ -271,7 +271,7 @@ function! outliner#createWebpage()
   else
     " grab the title and make sure we guard against some evil saboteur putting
     " backticks instead of single quotes on his webpage's title.
-    let raw = system("curl '" . url . "'")
+    let raw = system("curl -L '" . url . "'")
     let begin = match(raw, '<\s*title\s*>') + 7
     let end = match(raw, '<\s*.\?\s*title\s*>', begin)
     let title = strpart(raw, begin, end - begin)
