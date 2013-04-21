@@ -47,6 +47,56 @@ function! outliner#goTopLevelHeading(upto)
   endwhile
 endfunction
 
+function! outliner#search(goToNext)
+  let l:restorePos = getpos('.')[1:]
+  let l:restoreFoldopen = 0
+
+  if &foldopen =~ 'search'
+    set foldopen-=search
+    let l:restoreFoldopen = 1
+  endif
+
+  if a:goToNext
+    call outliner#searchMatch('n', l:restoreFoldopen, l:restorePos, 1)
+  else
+    let cmd = "call outliner#searchMatch('n', " . l:restoreFoldopen . ", [" .
+      \ l:restorePos[0].",".l:restorePos[1].",".l:restorePos[2] . "], 0)"
+    call helpers#registerCommand('CursorMoved', l:cmd, 'visibleSearch')
+  endif
+endfunction
+
+function! outliner#searchMatch(direction, restoreFoldopen, restorePos, goToNext)
+  if a:goToNext
+    execute "normal! " a:direction
+  endif
+  let current = line('.')
+  let initial = l:current
+
+  let firstNonClosedParent = foldclosed(l:current)
+  let indexed = get(b:TNTIndex, l:firstNonClosedParent, 0)
+
+  while l:firstNonClosedParent != -1 && ( (l:indexed && l:indexed != l:current)
+    \ || (!l:indexed && l:current != l:firstNonClosedParent) )
+
+    execute "normal! " a:direction
+    let l:current = line('.')
+    " to prevent infinite looping, stop when we loop around the search results
+    " back to our initial match (meaning no match found.)
+    if l:current == l:initial
+      " restore our original cursor position, since no match was found.
+      call cursor(a:restorePos)
+      break
+    endif
+
+    let l:firstNonClosedParent = foldclosed(l:current)
+    let l:indexed = get(b:TNTIndex, l:firstNonClosedParent, 0)
+  endwhile
+
+  if a:restoreFoldopen
+    set foldopen+=search
+  endif
+endfunction
+
 "syn region FoldFocus start="\(\([^\r\n]*[\r\n]\)\{6}\)\@<=\s*\S" end="\[^\r\n]*[\r\n]\(\([^[\r\n]*[\r\n]\)\{2}\)\@="
 "hi FoldFocus gui=bold guifg=LimeGreen cterm=bold ctermfg=Green
 "hi def link FoldFocus FoldFocus
@@ -166,8 +216,11 @@ function! outliner#foldText(...)
   let line = getline(l:current)
   " the label will be our final folded text
 
+  let indexed = ''
+  let formatted = ''
+
   " a thread begins with a quote followed optionally by pairs of quotes.
-  if l:line =~? '^\s*"\([^"]*"[^"]*"\)*[^"]*$'
+  if l:line =~ '^\s*"\([^"]*"[^"]*"\)*[^"]*$'
     let children = len(outliner#children(l:current))
     let l = matchstr(getline(l:current + 1), '\S[^{]*')
     let lindent = strpart(matchstr(getline(l:current + 1), '^\s*'), 2)
@@ -178,17 +231,19 @@ function! outliner#foldText(...)
     if l:line =~ '^\s*"!\d*'
       " get how many chars we should ensure (padding formatting).
       let chars = strpart(matchstr(l:line, '"!\d*'), 2)
-      " get the whole thread title up until it's timestamp, and add padding,
-      " and add padding.
+      " get the whole thread title up until it's timestamp, and add padding.
       let l:label = matchstr(l:line, '"![^{]*') . repeat(' ', chars)
       " extract the actual title and format to the size constraint.
       let l:label = strpart(l:label, 4, chars) . ' '
-      return l:lindent . l:label . l:l . '['.children.']'
+
+      let l:formatted = l:lindent . l:label . l:l . '['.children.']'
+    else | let l:formatted = l:lindent . l:l . '['.children.']'
     endif
-    return l:lindent . l:l . '['.children.']'
+    let b:TNTIndex[l:current] = l:current + 1
+    let b:TNTIndexCache[l:current] = l:l
 
   " a randomizer thread begins with a percent sign (whatever else does?)
-  elseif l:line =~? '^\s*%'
+  elseif l:line =~ '^\s*%'
     let label = get(b:TNTFoldCache, l:current, '')
     if l:label == ''
       let children = outliner#children(l:current)
@@ -199,17 +254,25 @@ function! outliner#foldText(...)
 
       let label = strpart(outliner#foldText(child), 2)
       let b:TNTFoldCache[l:current] = l:label
+
+      let b:TNTIndex[l:current] = l:child
+      let b:TNTIndexCache = l:label
     endif
-    return l:label
-  
+    let l:formatted = l:label
+
   " a note begins with a hash, and we'd like to show it's contents' word count.
-  elseif l:line =~? '^\s*!\?#'
+  elseif l:line =~ '^\s*!\?#'
     let lindent = matchstr(getline(l:current), '^\s*')
-    return lindent . matchstr(getline(l:current), '\S[^{]*') . '('
+    let label = matchstr(getline(l:current), '\S[^{]*')
+
+    let l:formatted = lindent . l:label . '('
       \ . outliner#wordCountRecursive(l:current) . ' words)'
+
+  else
+    let l:formatted = getline(l:current)
   endif
 
-  return getline(l:current)
+  return l:formatted
 endfunction
 
 function! outliner#wordCount(lnum)
@@ -231,7 +294,11 @@ function! outliner#wordCountRecursive(lnum)
 endfunction
 
 function! outliner#autocmds()
-  let b:TNTFoldCache = {}
+  " the fold cache is built to avoid expensive recomputations (e.g. random
+  " threads), the index keeps the line number of the child representing each
+  " thread, and the index cache is a quick access to those lines' text.
+  let b:TNTFoldCache = {} | let b:TNTIndex = {} | let b:TNTIndexCache = {}
+
   setlocal foldmethod=expr
   setlocal foldexpr=outliner#foldExpr(v:lnum)
   setlocal foldtext=outliner#foldText()

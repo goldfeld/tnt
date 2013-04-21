@@ -107,6 +107,19 @@ nnoremap <silent> <Space>bm {v}zmzc
 " open all threads on current block.
 nnoremap <silent> <Space>bt {v}zmzo
 
+" move down to next block
+"nnoremap <silent> <Space>bj
+" move up to previous block
+"nnoremap <silent> <Space>bk
+
+" search only visible text
+nnoremap <silent> <Space>/ :<C-U>call outliner#search(0, 'n')<CR>/
+nnoremap <silent> <Space>/ :<C-U>call outliner#search(0, 'N')<CR>?
+" go to next visible match
+nnoremap <silent> <Space>n :<C-U>call outliner#search(1, 'n')<CR>
+" go to previous visible match
+nnoremap <silent> <Space>N :<C-U>call outliner#search(1, 'N')<CR>
+
 " demote current heading.
 nnoremap <silent> <Space>>> zc>>zo
 " promote current heading.
