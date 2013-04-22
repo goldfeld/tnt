@@ -47,7 +47,7 @@ function! outliner#goTopLevelHeading(upto)
   endwhile
 endfunction
 
-function! outliner#search(goToNext)
+function! outliner#search(goToNext, direction)
   let l:restorePos = getpos('.')[1:]
   let l:restoreFoldopen = 0
 
@@ -57,10 +57,11 @@ function! outliner#search(goToNext)
   endif
 
   if a:goToNext
-    call outliner#searchMatch('n', l:restoreFoldopen, l:restorePos, 1)
+    call outliner#searchMatch(a:direction, l:restoreFoldopen, l:restorePos, 1)
   else
-    let cmd = "call outliner#searchMatch('n', " . l:restoreFoldopen . ", [" .
-      \ l:restorePos[0].",".l:restorePos[1].",".l:restorePos[2] . "], 0)"
+    let cmd = "call outliner#searchMatch('" . a:direction
+      \ . "', " . l:restoreFoldopen . ", ["
+      \ . l:restorePos[0] .",". l:restorePos[1] .",". l:restorePos[2] . "], 0)"
     call helpers#registerCommand('CursorMoved', l:cmd, 'visibleSearch')
   endif
 endfunction
