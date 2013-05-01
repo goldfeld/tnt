@@ -41,7 +41,6 @@ function! outliner#goFirstLower(direction)
 endfunction
 
 function! outliner#goTopLevelHeading(upto)
-  echo a:upto
   while outliner#indentLevel(line('.')) > a:upto
     execute 'normal! [z'
   endwhile
