@@ -46,34 +46,60 @@ function! outliner#goTopLevelHeading(upto)
   endwhile
 endfunction
 
-function! outliner#search(goToNext, direction)
-  let l:restorePos = getpos('.')[1:]
-  let l:restoreFoldopen = 0
+let s:searchMapping = { 'n': '/', 'N': '?' }
+function! outliner#search(directive, direction, ...)
+  let clearHighlight = 1
+  " the third optional parameter, if true, tells us not to clear the search
+  " highlighting (i.e. a normal search.)
+  if a:0 == 3 && a:1 | let l:clearHighlight = 0 | endif
+
+  let restorePos = getpos('.')[1:]
+  let restoreFoldopen = 0
 
   if &foldopen =~ 'search'
     set foldopen-=search
     let l:restoreFoldopen = 1
   endif
 
-  if a:goToNext
-    call outliner#searchMatch(a:direction, l:restoreFoldopen, l:restorePos, 1)
-  else
+  " the NEXT directive means to just n/N to the next match of previous search.
+  if a:directive ==# '!NEXT!'
+    execute "normal! " a:direction
+    call outliner#searchMatch(a:direction, l:restoreFoldopen, l:restorePos)
+  " the WAIT directive means we should expect user input to drive the search,
+  " so we setup a one-time autocmd to fire on the next CursorMoved, then prompt
+  " the user for the search input.
+  elseif a:directive ==# '!WAIT!'
+    let char = getchar()
+    let search = ''
+    while l:char != 13 && l:char != 27
+      let l:search = l:search . nr2char(l:char)
+      let l:char = getchar()
+    endwhile
+    let @/ = l:search
+    call outliner#searchMatch(a:direction, l:restoreFoldopen, l:restorePos,
+      \ l:clearHighlight)
+    return
+
     let cmd = "call outliner#searchMatch('" . a:direction
       \ . "', " . l:restoreFoldopen . ", ["
-      \ . l:restorePos[0] .",". l:restorePos[1] .",". l:restorePos[2] . "], 0)"
+      \ . l:restorePos[0] .",". l:restorePos[1] .",". l:restorePos[2] . "])"
     call helpers#registerCommand('CursorMoved', l:cmd, 'visibleSearch')
+    execute "normal! " s:searchMapping[a:direction]
+  " any other directive is interpreted to be a pattern to search for.
+  else 
+    execute "normal! " . s:searchMapping[a:direction] . a:directive . "\r"
+    call outliner#searchMatch(a:direction, l:restoreFoldopen, l:restorePos,
+      \ l:clearHighlight)
+
   endif
 endfunction
 
-function! outliner#searchMatch(direction, restoreFoldopen, restorePos, goToNext)
-  if a:goToNext
-    execute "normal! " a:direction
-  endif
+function! outliner#searchMatch(direction, restoreFoldopen, restorePos, clear)
   let current = line('.')
   let initial = l:current
 
   let firstNonClosedParent = foldclosed(l:current)
-  let indexed = get(b:TNTIndex, l:firstNonClosedParent, 0)
+  let indexed = get(b:TNTThreads, l:firstNonClosedParent, 0)
 
   while l:firstNonClosedParent != -1 && ( (l:indexed && l:indexed != l:current)
     \ || (!l:indexed && l:current != l:firstNonClosedParent) )
@@ -89,9 +115,10 @@ function! outliner#searchMatch(direction, restoreFoldopen, restorePos, goToNext)
     endif
 
     let l:firstNonClosedParent = foldclosed(l:current)
-    let l:indexed = get(b:TNTIndex, l:firstNonClosedParent, 0)
+    let l:indexed = get(b:TNTThreads, l:firstNonClosedParent, 0)
   endwhile
 
+  if a:clear | nohlsearch | endif
   if a:restoreFoldopen
     set foldopen+=search
   endif
@@ -127,7 +154,7 @@ function! outliner#timestampI(cmd)
   execute 'normal! '.cmd.l:date
 endfunction
 
-" code from Vim The Hard Way
+" next two functions from Vimscript The Hard Way by Steve Losh
 function! outliner#indentLevel(lnum)
   return indent(a:lnum) / &shiftwidth
 endfunction
@@ -220,9 +247,16 @@ function! outliner#foldText(...)
   let formatted = ''
 
   " a thread begins with a quote followed optionally by pairs of quotes.
-  if l:line =~ '^\s*"\([^"]*"[^"]*"\)*[^"]*$'
+  if l:line =~ g:TNTRegex.thread
     let children = len(outliner#children(l:current))
     let l = matchstr(getline(l:current + 1), '\S[^{]*')
+    let by = strridx(l:l, '(:')
+    if l:by != -1
+      let pos = l:by
+      let l:by = strpart(l:l, l:pos)
+      let l:l = strpart(l:l, 0, l:pos)
+    endif
+
     let lindent = strpart(matchstr(getline(l:current + 1), '^\s*'), 2)
     " make it optional for threads to show their content with a special symbol
     " in front of them, e.g. the double quote or a bang
@@ -239,8 +273,8 @@ function! outliner#foldText(...)
       let l:formatted = l:lindent . l:label . l:l . '['.children.']'
     else | let l:formatted = l:lindent . l:l . '['.children.']'
     endif
-    let b:TNTIndex[l:current] = l:current + 1
-    let b:TNTIndexCache[l:current] = l:l
+    let b:TNTThreads[l:current] = { 'target': l:current + 1, 'short': l:l,
+      \ 'full': l:label . l:l, 'by': l:by }
 
   " a randomizer thread begins with a percent sign (whatever else does?)
   elseif l:line =~ '^\s*%'
@@ -252,11 +286,13 @@ function! outliner#foldText(...)
       let random = l:number % len(l:children)
       let child = l:children[random]
 
+      "execute "!echo" random
+
       let label = strpart(outliner#foldText(child), 2)
       let b:TNTFoldCache[l:current] = l:label
 
-      let b:TNTIndex[l:current] = l:child
-      let b:TNTIndexCache = l:label
+      let b:TNTThreads[l:current] = { 'line': l:child, 'short': l:label,
+        \ 'full': l:label }
     endif
     let l:formatted = l:label
 
@@ -297,7 +333,7 @@ function! outliner#autocmds()
   " the fold cache is built to avoid expensive recomputations (e.g. random
   " threads), the index keeps the line number of the child representing each
   " thread, and the index cache is a quick access to those lines' text.
-  let b:TNTFoldCache = {} | let b:TNTIndex = {} | let b:TNTIndexCache = {}
+  let b:TNTFoldCache = {} | let b:TNTThreads = {}
 
   setlocal foldmethod=expr
   setlocal foldexpr=outliner#foldExpr(v:lnum)

@@ -42,40 +42,48 @@ augroup TNT
   autocmd InsertLeave *.tnt.*,*.ana.* let &l:foldmethod=w:last_fm
 augroup END
 
+let g:TNTRegex = {
+  \ 'thread': '^\s*"\([^"]*"[^"]*"\)*[^"]*$'
+  \ }
+
 nnoremap <silent> <Space>w :TNTTriggerSession<CR>
 command! -nargs=0 TNTTriggerSession call outliner#triggerSession(line('.'))
 
 nnoremap <silent> <Space>W :TNTCreateWebpage<CR>
 command! -nargs=0 TNTCreateWebpage call outliner#createWebpage()
 
-nnoremap <silent> <Space>mt :execute "normal! a{>>". outliner#timestamp() ."<<}"<CR>
+nnoremap <silent> <Space>m. :execute "normal! a{>>". outliner#timestamp() ."<<}"<CR>
 nnoremap <silent> <Space>t :echo 'cmd-t for folds'<CR>
 
 " go to current heading's next sibling.
-noremap <silent> <Space>j :call outliner#goNextSibling()<CR>
+nnoremap <silent> <Space>j :call outliner#goNextSibling()<CR>
 " go to current heading's previous sibling.
-noremap <silent> <Space>k :call outliner#goPreviousSibling()<CR>
+nnoremap <silent> <Space>k :call outliner#goPreviousSibling()<CR>
 " go to current subtree's heading.
-noremap <silent> <Space>h [z
+nnoremap <silent> <Space>h @=(outliner#indentLevel('.')?'[z':'')
 " go to next subtree's heading.
-noremap <silent> <Space>n ]zj
+nnoremap <silent> <Space>n ]zj
 
 " go to first heading of a lower level than the current.
-noremap <silent> <Space>l :call outliner#goFirstLower('j')<CR>
+nnoremap <silent> <Space>l :call outliner#goFirstLower('j')<CR>
 " go to current subtree's last open item.
-noremap <silent> <Space>e ]z
+nnoremap <silent> <Space>e ]z
 " go to current tree's (whole tree from root) last open item.
-"noremap <silent> <Space>E
+"nnoremap <silent> <Space>E
+
+" go back to find the first heading of a lower level than the current.
+nnoremap <silent> <Space>gl :call outliner#goFirstLower('k')<CR>
 
 " go to 0th-level heading of current fold, or nth-level with a count.
-noremap <silent> <Space>H :<C-U>call outliner#goTopLevelHeading(v:count)<CR>
-" go back to find the first heading of a lower level than the current.
-noremap <silent> <Space>L :call outliner#goFirstLower('k')<CR>
+nnoremap <silent> <Space>H :<C-U>call outliner#goTopLevelHeading(v:count)<CR>
+" go to 0th-level next heading
+nnoremap <silent> <Space>L :<C-U>call outliner#goTopLevelHeading(0)<CR>
+  \ :call outliner#goNextSibling()<CR>
 
 " close current subtree's heading
-noremap <silent> <Space>c [zzc
+nnoremap <silent> <Space>c @=(outliner#indentLevel('.')?'[z':'')zc
 " close 0th-level heading of current fold, or nth-level with a count.
-noremap <silent> <Space>C :<C-U>call outliner#goTopLevelHeading(v:count)<CR>zc
+nnoremap <silent> <Space>C :<C-U>call outliner#goTopLevelHeading(v:count)<CR>zc
 
 " insert a new parent for the current item. 
 "nnoremap <silent> <Space>i
@@ -113,12 +121,39 @@ nnoremap <silent> <Space>bt {v}zmzo
 "nnoremap <silent> <Space>bk
 
 " search only visible text
-nnoremap <silent> <Space>/ :<C-U>call outliner#search(0, 'n')<CR>/
-nnoremap <silent> <Space>? :<C-U>call outliner#search(0, 'N')<CR>?
+nnoremap <silent> <Space>/ :<C-U>call outliner#search('!WAIT!', 'n', 1)<CR>
+nnoremap <silent> <Space>? :<C-U>call outliner#search('!WAIT!', 'N', 1)<CR>
 " go to next visible match
-nnoremap <silent> <Space>n :<C-U>call outliner#search(1, 'n')<CR>
+nnoremap <silent> <Space>n :<C-U>call outliner#search('!NEXT!', 'n', 1)<CR>
 " go to previous visible match
-nnoremap <silent> <Space>N :<C-U>call outliner#search(1, 'N')<CR>
+nnoremap <silent> <Space>N :<C-U>call outliner#search('!NEXT!', 'N', 1)<CR>
+
+" search for next/prev visible markdown heading
+command! -nargs=0 TNTVisibleHeadingNext call outliner#search("^\s*#", 'n')
+nnoremap <silent> <Space>mh :TNTVisibleHeadingNext<CR>
+command! -nargs=0 TNTVisibleHeadingPrev call outliner#search("^\s*#", 'N')
+nnoremap <silent> <Space>ml :TNTVisibleHeadingPrev<CR>
+" search for next/prev markdown heading
+command! -nargs=0 TNTVisibleHeadingNext call outliner#search("^\s*#", 'n')
+nnoremap <silent> <Space>mh :TNTVisibleHeadingNext<CR>
+command! -nargs=0 TNTVisibleHeadingPrev call outliner#search("^\s*#", 'N')
+nnoremap <silent> <Space>ml :TNTVisibleHeadingPrev<CR>
+
+command! -nargs=0 TNTVisibleSectionNext call outliner#search('^$', 'n')
+nnoremap <silent> <Space>} :TNTVisibleSectionNext<CR>
+command! -nargs=0 TNTVisibleSectionPrev call outliner#search('^$', 'N')
+nnoremap <silent> <Space>{ :TNTVisibleSectionPrev<CR>
+
+" search for next/prev visible thread
+com! -nargs=0 TNTVisibleThreadNext call outliner#search(g:TNTRegex.thread, 'n')
+nnoremap <silent> <Space>m' :TNTVisibleThreadNext<CR>
+com! -nargs=0 TNTVisibleThreadPrev call outliner#search(g:TNTRegex.thread, 'N')
+nnoremap <silent> <Space>m" :TNTVisibleThreadPrev<CR>
+" search for next/prev thread
+com! -nargs=0 TNTThreadNext execute "normal! /" . g:TNTRegex.thread . "\<CR>"
+nnoremap <silent> <Space>M' :TNTThreadNext<CR>
+com! -nargs=0 TNTThreadPrev execute "normal! ?" . g:TNTRegex.thread . "\<CR>"
+nnoremap <silent> <Space>M" :TNTThreadPrev<CR>
 
 " demote current heading.
 nnoremap <silent> <Space>>> zc>>zo
