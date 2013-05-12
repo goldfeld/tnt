@@ -60,7 +60,7 @@ nnoremap <silent> <Space>j :call outliner#goNextSibling()<CR>
 " go to current heading's previous sibling.
 nnoremap <silent> <Space>k :call outliner#goPreviousSibling()<CR>
 " go to current subtree's heading.
-nnoremap <silent> <Space>h @=(outliner#indentLevel('.')?'[z':'')
+nnoremap <silent> <Space>h @=(outliner#indentLevel('.')?'[z':'')<CR>
 " go to next subtree's heading.
 nnoremap <silent> <Space>n ]zj
 
@@ -81,7 +81,7 @@ nnoremap <silent> <Space>L :<C-U>call outliner#goTopLevelHeading(0)<CR>
   \ :call outliner#goNextSibling()<CR>
 
 " close current subtree's heading
-nnoremap <silent> <Space>c @=(outliner#indentLevel('.')?'[z':'')zc
+nnoremap <silent> <Space>c @=(outliner#indentLevel('.')?'[z':'')<CR>zc
 " close 0th-level heading of current fold, or nth-level with a count.
 nnoremap <silent> <Space>C :<C-U>call outliner#goTopLevelHeading(v:count)<CR>zc
 
