@@ -236,12 +236,43 @@ function! outliner#triggerSession(lnum)
   call system(browser.l:links)
 endfunction
 
+let s:firstFold = -1
+let s:numFolds = 0
+let s:countFolds = 0
+" we keep track of each fold's position so that we can bust our fold cache if
+" their position changes.
+let s:seqFolds = []
+
 function! outliner#foldText(...)
   if a:0 == 1 | let current = a:1
   else | let current = v:foldstart
   endif
   let line = getline(l:current)
   " the label will be our final folded text
+
+  if s:firstFold == -1
+    let s:firstFold = l:current
+    let s:seqFolds[1] = l:current
+    let s:countFolds = 1
+  " when our current fold is back to our first fold again, that means we
+  " completed a lap (i.e. a complete iteration of all our folds.)
+  elseif l:current == s:firstFold
+    let s:numFolds = s:countFolds
+    let s:countFolds = 0
+    wviminfo
+  " if we haven't completed a lap yet and our countFolds has come to equal our
+  " last numFolds, we take it to mean our original fistFold is gone so we set
+  " a new one.
+  elseif s:countFolds == s:numFolds
+    let firstFold = l:current
+    " reset our fold sequence array.
+    let s:seqFolds = [l:current]
+    let s:countFolds = 1
+    wviminfo
+  else
+    let s:countFolds += 1
+    let s:seqFolds[s:countFolds] = l:current
+  endif
 
   let indexed = ''
   let formatted = ''
