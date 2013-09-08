@@ -383,7 +383,7 @@ function! outliner#createWebpage()
   " if we're not at the end of the url.
   let adjust = ''
   if len(next) && !(next =~ '\s') | let l:adjust = 'E' | endif
-  execute "normal! " . adjust . "a]\<Esc>yBi["
+  execute "normal! " . adjust . "a)\<Esc>yBi["
 
   " our normal call above used the y operator to capture the url.
   let url = @"
@@ -426,7 +426,7 @@ function! outliner#createWebpage()
 
   " finish the markdown link now that we (hopefully) have the title
   execute "normal! a".title
-  execute "normal! kJxha]["
+  execute "normal! kJxha]("
 endfunction
 
 function! outliner#checkBashUtility(name)
