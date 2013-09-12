@@ -1,6 +1,6 @@
 "" =============================================================================
 "" File:          autoload/outliner.vim
-"" License:       see /plugin/tnt.vim
+"" License:       see file /LICENSE
 "" =============================================================================
 
 function! outliner#goPreviousSibling()
@@ -40,7 +40,7 @@ function! outliner#goFirstLower(direction)
   endwhile
 endfunction
 
-function! outliner#goTopLevelHeading(upto)
+function! outliner#goSummit(upto)
   while outliner#indentLevel(line('.')) > a:upto
     execute 'normal! [z'
   endwhile

@@ -75,15 +75,15 @@ nnoremap <silent> <Space>e ]z
 nnoremap <silent> <Space>gl :call outliner#goFirstLower('k')<CR>
 
 " go to 0th-level heading of current fold, or nth-level with a count.
-nnoremap <silent> <Space>H :<C-U>call outliner#goTopLevelHeading(v:count)<CR>
+nnoremap <silent> <Space>H :<C-U>call outliner#goSummit(v:count)<CR>
 " go to 0th-level next heading
-nnoremap <silent> <Space>L :<C-U>call outliner#goTopLevelHeading(0)<CR>
+nnoremap <silent> <Space>L :<C-U>call outliner#goSummit(0)<CR>
   \ :call outliner#goNextSibling()<CR>
 
 " close current subtree's heading
 nnoremap <silent> <Space>c @=(outliner#indentLevel('.')?'[z':'')<CR>zc
 " close 0th-level heading of current fold, or nth-level with a count.
-nnoremap <silent> <Space>C :<C-U>call outliner#goTopLevelHeading(v:count)<CR>zc
+nnoremap <silent> <Space>C :<C-U>call outliner#goSummit(v:count)<CR>zc
 
 " insert a new parent for the current item. 
 "nnoremap <silent> <Space>i
@@ -163,3 +163,18 @@ nnoremap <silent> <Space><< zc<<zo
 nnoremap <silent> <Space>mj zcddpzo
 " move current fold up one position.
 nnoremap <silent> <Space>mk zcddkPzo
+
+" ----------------
+" TNT-API COMMANDS
+" ----------------
+
+" DELETION COMMANDS
+"
+" mutinying a line promotes the first child to take it's place.
+command! -nargs=+ TNTMutinyLine call api#mutinyLine(<f-args>)
+" exploding a line eclodes it's children, i.e. it promotes each of them.
+command! -nargs=+ TNTExplodeLine echo "TNTExplodeLine is not implemented."
+" killing a line orphans it's children, sending them to the nearest inbox.
+command! -nargs=+ TNTKillLine echo "TNTKillLine is not implemented."
+" killing a fold deletes the heading and all it's children, recursively.
+command! -nargs=+ TNTKillFold echo "TNTKillFold is not implemented."
