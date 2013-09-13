@@ -129,7 +129,7 @@ endfunction
 "hi def link FoldFocus FoldFocus
 
 function! outliner#timestamp()
-  if outliner#checkBashUtility('ruby')
+  if executable('ruby')
     let date = system("ruby -e 'puts Time.now.to_f'")
     return strpart(substitute(l:date, '\.', '', 'g'), 0, 13)
   else
@@ -414,10 +414,10 @@ function! outliner#createWebpage()
     let title = substitute(title, '[`"]', "'", 'g')
 
     " we're gonna try a few tools to decode the html entities.
-    if outliner#checkBashUtility('php')
+    if executable('php')
       let decode = "php -r 'echo html_entity_decode(fgets(STDIN),"
         \ . " ENT_NOQUOTES, " . '"UTF-8"' . ");'"
-    elseif outliner#checkBashUtility('recode')
+    elseif executable('recode')
       let decode = "recode HTML_4.0"
     else | let decode = ''
     endif
@@ -429,10 +429,3 @@ function! outliner#createWebpage()
   execute "normal! kJxha]("
 endfunction
 
-function! outliner#checkBashUtility(name)
-  let result = system('hash '.a:name.' 2>/dev/null'
-    \ . ' || { echo >&1 "not available"; exit 1; }')
-  if result =~ 'not available' | return 0
-  else | return 1
-  endif
-endfunction
