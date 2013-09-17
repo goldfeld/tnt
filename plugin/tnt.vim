@@ -69,7 +69,8 @@ nnoremap <silent> <Space>l :call outliner#goFirstLower('j')<CR>
 " go to current subtree's last open item.
 nnoremap <silent> <Space>e ]z
 " go to current tree's (whole tree from root) last open item.
-"nnoremap <silent> <Space>E
+" for now go to subtree's last item, opening recursively.
+nnoremap <silent> <Space>E ]zzO
 
 " go back to find the first heading of a lower level than the current.
 nnoremap <silent> <Space>gl :call outliner#goFirstLower('k')<CR>
