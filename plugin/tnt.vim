@@ -122,12 +122,12 @@ nnoremap <silent> <Space>bt {v}zmzo
 "nnoremap <silent> <Space>bk
 
 " search only visible text
-nnoremap <silent> <Space>/ :<C-U>call outliner#search('!WAIT!', 'n', 1)<CR>
-nnoremap <silent> <Space>? :<C-U>call outliner#search('!WAIT!', 'N', 1)<CR>
+nnoremap <silent> <Space>/ :<C-U>call outliner#search(':wait', 'n', 1)<CR>
+nnoremap <silent> <Space>? :<C-U>call outliner#search(':wait', 'N', 1)<CR>
 " go to next visible match
-nnoremap <silent> <Space>n :<C-U>call outliner#search('!NEXT!', 'n', 1)<CR>
+nnoremap <silent> <Space>n :<C-U>call outliner#search(':next', 'n', 1)<CR>
 " go to previous visible match
-nnoremap <silent> <Space>N :<C-U>call outliner#search('!NEXT!', 'N', 1)<CR>
+nnoremap <silent> <Space>N :<C-U>call outliner#search(':next', 'N', 1)<CR>
 
 " search for next/prev visible markdown heading
 command! -nargs=0 TNTVisibleHeadingNext call outliner#search("^\s*#", 'n')

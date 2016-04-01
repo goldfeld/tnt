@@ -61,14 +61,15 @@ function! outliner#search(directive, direction, ...)
     let l:restoreFoldopen = 1
   endif
 
-  " the NEXT directive means to just n/N to the next match of previous search.
-  if a:directive ==# '!NEXT!'
+  " the :next directive means to just n/N to the next match of previous
+  " search.
+  if a:directive ==# ':next'
     execute "normal! " a:direction
     call outliner#searchMatch(a:direction, l:restoreFoldopen, l:restorePos)
-  " the WAIT directive means we should expect user input to drive the search,
-  " so we setup a one-time autocmd to fire on the next CursorMoved, then prompt
-  " the user for the search input.
-  elseif a:directive ==# '!WAIT!'
+  " the :wait directive means we should expect user input to drive the 
+  " search, so we setup a one-time autocmd to fire on the next 
+  " CursorMoved, then prompt the user for the search input.
+  elseif a:directive ==# ':wait'
     let char = getchar()
     let search = ''
     while l:char != 13 && l:char != 27
@@ -136,22 +137,6 @@ function! outliner#timestamp()
     let date = system('date +%s%N | cut -b1-13')
     return strpart(l:date, 0, len(l:date) - 1)
   endif
-endfunction
-
-function! outliner#timestampN(cmd)
-  let date = outliner#timestamp()
-  let lnum = line('.')
-  execute "normal! ".a:cmd
-
-  execute "s/$/ {>>". l:date ."<<}/"
-  execute "normal! 0"
-  startinsert
-endfunction
-
-function! outliner#timestampI(cmd)
-  let date = outliner#timestamp()
-  call feedkeys(a:cmd.l:date)
-  execute 'normal! '.cmd.l:date
 endfunction
 
 " next two functions from Vimscript The Hard Way by Steve Losh
@@ -370,8 +355,8 @@ function! outliner#autocmds()
   setlocal foldexpr=outliner#foldExpr(v:lnum)
   setlocal foldtext=outliner#foldText()
   setlocal foldopen=search,mark,percent,quickfix,tag,undo
-  nnoremap <silent> <buffer> o :call outliner#timestampN('o')<CR>
-  nnoremap <silent> <buffer> O :call outliner#timestampN('O')<CR>
+  setlocal filetype=markdown
+  setlocal nowrap
   "inoremap <silent> <buffer> <CR> :call outliner#timestampI("\<CR>")<CR>
 endfunction
 
