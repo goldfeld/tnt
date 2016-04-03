@@ -1,8 +1,26 @@
-" next two functions from Vimscript The Hard Way by Steve Losh
-function! outliner#indent_level(lnum)
+" following two functions from Luc Hermitte
+function! s:register_command(event, cmd, group)
+  let group = a:group.'_once'
+  let s:{group} = 0
+  exe 'augroup '.group
+  au!
+  exe 'au ' .a:event. ' ' .expand('%:p').
+    \ ' call s:registered_once('.string(a:cmd).','.string(group).')'
+  augroup END
+endfunction
+function! s:registered_once(cmd, group)
+  " We can't delete the current  autocommand => increment a counter
+  if !exists('s:'.a:group) || s:{a:group} == 0
+    let s:{a:group} = 1
+    exe a:cmd
+  endif
+endfunction
+
+" following two functions from Vimscript The Hard Way by Steve Losh
+function! tnt#outliner#indent_level(lnum)
   return indent(a:lnum) / &shiftwidth
 endfunction
-function! outliner#next_non_blank_line(lnum)
+function! tnt#outliner#next_non_blank_line(lnum)
   let numlines = line('$')
   let current = a:lnum + 1
   while current <= numlines
@@ -12,7 +30,7 @@ function! outliner#next_non_blank_line(lnum)
   return -2
 endfunction
 
-function! outliner#fold_text(...)
+function! tnt#outliner#fold_text(...)
   if a:0 == 1 | let current = a:1
   else | let current = v:foldstart
   endif
@@ -48,7 +66,7 @@ function! outliner#fold_text(...)
 
   " a thread begins with a quote followed optionally by pairs of quotes.
   if line =~ g:tnt_regex.thread
-    let children = len(outliner#children(current))
+    let children = len(tnt#outliner#children(current))
     let l = matchstr(getline(current + 1), '\S[^{]*')
     let by = strridx(l, '(:')
     if by != -1
@@ -81,11 +99,11 @@ function! outliner#fold_text(...)
   elseif line =~ '^\s*%'
     let label = get(b:tnt_fold_cache, current, '')
     if label == ''
-      let children = outliner#children(current)
+      let children = tnt#outliner#children(current)
       let random = system('sh -c "echo -n $RANDOM"') % len(children)
       let child = children[random]
 
-      let label = strpart(outliner#fold_text(child), 2)
+      let label = strpart(tnt#outliner#fold_text(child), 2)
       let b:tnt_fold_cache[current] = label
 
       let b:tnt_threads[current] = { 'line': child, 'short': label,
@@ -100,7 +118,7 @@ function! outliner#fold_text(...)
     let label = matchstr(getline(current), '\S[^{]*')
 
     let l:formatted = lindent . label . '('
-      \ . outliner#word_count_recursive(current) . ' words)'
+      \ . tnt#outliner#word_count_recursive(current) . ' words)'
 
   else
     let l:formatted = getline(current)
@@ -109,17 +127,17 @@ function! outliner#fold_text(...)
   return formatted
 endfunction
 
-function! outliner#fold_expr(lnum)
+function! tnt#outliner#fold_expr(lnum)
   if getline(a:lnum) =~? '\v^\s*$' | return -1 | endif
-  let this_indent = outliner#indent_level(a:lnum)
-  let next_indent = outliner#indent_level(outliner#next_non_blank_line(a:lnum))
+  let this_indent = tnt#outliner#indent_level(a:lnum)
+  let next_indent = tnt#outliner#indent_level(tnt#outliner#next_non_blank_line(a:lnum))
   if next_indent == this_indent | return this_indent
   elseif next_indent < this_indent | return this_indent
   elseif next_indent > this_indent | return '>' . next_indent
   endif
 endfunction
 
-function! outliner#on_open_file()
+function! tnt#outliner#on_open_file()
   " tnt_fold_cache is built to avoid expensive recomputations (e.g. random
   " threads); tnt_threads keeps the line number of the child representing
   " each thread.
@@ -135,21 +153,20 @@ function! outliner#on_open_file()
   let b:tnt_seq_folds = []
 
   setlocal foldmethod=expr
-  setlocal foldexpr=outliner#fold_expr(v:lnum)
-  setlocal foldtext=outliner#fold_text()
+  setlocal foldexpr=tnt#outliner#fold_expr(v:lnum)
+  setlocal foldtext=tnt#outliner#fold_text()
   setlocal foldopen=search,mark,percent,quickfix,tag,undo
   setlocal filetype=markdown
   setlocal nowrap
-  "inoremap <silent> <buffer> <CR> :call outliner#timestampI("\<CR>")<CR>
 endfunction
 
-function! outliner#go_previous_sibling()
+function! tnt#outliner#go_previous_sibling()
   let column = getpos('.')[2]
-  let heading = outliner#indent_level(line('.'))
+  let heading = tnt#outliner#indent_level(line('.'))
   execute 'normal! k'
   let prev = line('.')
-  if outliner#indent_level(prev) != heading || foldclosed(prev) == -1
-    while outliner#indent_level(line('.')) > heading
+  if tnt#outliner#indent_level(prev) != heading || foldclosed(prev) == -1
+    while tnt#outliner#indent_level(line('.')) > heading
       execute 'normal! [z'
     endwhile
     execute 'normal! '.column.'|'
@@ -157,37 +174,37 @@ function! outliner#go_previous_sibling()
   endif
 endfunction
 
-function! outliner#go_next_sibling()
+function! tnt#outliner#go_next_sibling()
   let current = line('.')
   execute 'normal! j'
   let next = line('.')
-  if outliner#indent_level(next) > outliner#indent_level(current)
+  if tnt#outliner#indent_level(next) > tnt#outliner#indent_level(current)
     execute 'normal! ]zj'
   endif
 endfunction
 
-function! outliner#go_first_lower(direction)
-  let startindent = outliner#indent_level(line('.'))
+function! tnt#outliner#go_first_lower(direction)
+  let startindent = tnt#outliner#indent_level(line('.'))
   execute 'normal! ' . a:direction
   let current = line('.')
-  let currentindent = outliner#indent_level(current)
+  let currentindent = tnt#outliner#indent_level(current)
   while currentindent <= startindent
     \ || matchstr(getline(current), s:webpage_regex) != ''
     if currentindent < startindent | return | endif
     execute 'normal! ' . a:direction
     let current = line('.')
-    let currentindent = outliner#indent_level(current)
+    let currentindent = tnt#outliner#indent_level(current)
   endwhile
 endfunction
 
-function! outliner#go_summit(upto)
-  while outliner#indent_level(line('.')) > a:upto
+function! tnt#outliner#go_summit(upto)
+  while tnt#outliner#indent_level(line('.')) > a:upto
     execute 'normal! [z'
   endwhile
 endfunction
 
 let s:search_mapping = { 'n': '/', 'N': '?' }
-function! outliner#search(directive, direction, ...)
+function! tnt#outliner#search(directive, direction, ...)
   let clear_highlight = 1
   " the third optional parameter, if true, tells us not to clear the search
   " highlighting (i.e. a normal search.)
@@ -205,7 +222,7 @@ function! outliner#search(directive, direction, ...)
   " search.
   if a:directive ==# ':next'
     execute "normal! " a:direction
-    call outliner#search_match(a:direction, restore_foldopen, restore_pos)
+    call tnt#outliner#search_match(a:direction, restore_foldopen, restore_pos)
   " the :wait directive means we should expect user input to drive the 
   " search, so we setup a one-time autocmd to fire on the next 
   " CursorMoved, then prompt the user for the search input.
@@ -217,24 +234,24 @@ function! outliner#search(directive, direction, ...)
       let char = getchar()
     endwhile
     let @/ = search
-    call outliner#searchMatch(a:direction, restore_foldopen, restore_pos,
+    call tnt#outliner#searchMatch(a:direction, restore_foldopen, restore_pos,
       \ clear_highlight)
     return
 
-    let cmd = "call outliner#search_match('" . a:direction
+    let cmd = "call tnt#outliner#search_match('" . a:direction
       \ . "', " . restore_foldopen . ", ["
       \ . restore_pos[0] .",". restore_pos[1] .",". restore_pos[2] . "])"
-    call helpers#register_command('CursorMoved', cmd, 'visibleSearch')
+    call s:register_command('CursorMoved', cmd, 'visibleSearch')
     execute "normal! " s:search_mapping[a:direction]
   " any other directive is interpreted to be a pattern to search for.
   else 
     execute "normal! " . s:search_mapping[a:direction] . a:directive . "\r"
-    call outliner#search_match(a:direction, restore_foldopen, restore_pos,
+    call tnt#outliner#search_match(a:direction, restore_foldopen, restore_pos,
       \ clear_highlight)
   endif
 endfunction
 
-function! outliner#search_match(direction, restore_foldopen, restore_pos, clear)
+function! tnt#outliner#search_match(direction, restore_foldopen, restore_pos, clear)
   let current = line('.')
   let initial = current
 
@@ -268,21 +285,21 @@ endfunction
 "hi FoldFocus gui=bold guifg=LimeGreen cterm=bold ctermfg=Green
 "hi def link FoldFocus FoldFocus
 
-function! outliner#children(...)
+function! tnt#outliner#children(...)
   let [lnum, filter] = [0, '']
   if a:0 == 0 | return | endif
   if a:0 == 2 | let filter = a:2 | endif
   let lnum = a:1
 
-  let parent = outliner#indent_level(lnum)
+  let parent = tnt#outliner#indent_level(lnum)
   let i = 1
-  let indent = outliner#indent_level(lnum + i)
+  let indent = tnt#outliner#indent_level(lnum + i)
   let children = []
   if l:filter == ''
     while indent > parent
       if indent == parent + 1 | call add(children, lnum + i) | endif
       let i = i + 1
-      let l:indent = outliner#indent_level(lnum + i)
+      let l:indent = tnt#outliner#indent_level(lnum + i)
     endwhile
 
   else
@@ -293,13 +310,13 @@ function! outliner#children(...)
         endif
       endif
       let i = i + 1
-      let l:indent = outliner#indent_level(lnum + i)
+      let l:indent = tnt#outliner#indent_level(lnum + i)
     endwhile
   endif
   return children
 endfunction
 
-function! outliner#human_date(line)
+function! tnt#outliner#human_date(line)
   echo a:line
   return
   return substitute(a:line, '{>>\([^<]*\)<<}\s*$', '\=submatch(0)')
@@ -309,14 +326,14 @@ let s:webpage_regex = '^\s*\((\d\d\d\?%)\)\?'
   \ . '\[[^\]]*\]\[[^\]]*\]'
   \ . '\s*\({>>\d*<<}\)\?\s*$'
 
-function! outliner#trigger_session(lnum)
+function! tnt#outliner#trigger_session(lnum)
   let browser = get(g:, 'TNTWebBrowser', '')
   if !len(browser)
     echom 'Please set your web browser by having e.g."'
       \ . "let g:TNTWebBrowser = 'google-chrome'" . '" in your vimrc.'
     return
   endif
-  let webpages = outliner#children(a:lnum, s:webpage_regex)
+  let webpages = tnt#outliner#children(a:lnum, s:webpage_regex)
   if !len(webpages) | return | endif
   let links = ''
   for page in webpages
@@ -326,24 +343,24 @@ function! outliner#trigger_session(lnum)
   call system(browser.l:links)
 endfunction
 
-function! outliner#word_count(lnum)
+function! tnt#outliner#word_count(lnum)
   return len(split(getline(a:lnum), '\s'))
 endfunction
 
-function! outliner#word_count_recursive(lnum)
+function! tnt#outliner#word_count_recursive(lnum)
   let wc = get(b:tnt_fold_cache, a:lnum, 0)
   if wc == 0
-    let children = outliner#children(a:lnum)
+    let children = tnt#outliner#children(a:lnum)
     for child in children
-      let l:wc += outliner#word_count_recursive(child)
+      let l:wc += tnt#outliner#word_count_recursive(child)
     endfor
-    let l:wc += outliner#word_count(a:lnum)
+    let l:wc += tnt#outliner#word_count(a:lnum)
     let b:tnt_fold_cache[a:lnum] = wc
   endif
   return wc
 endfunction
 
-function! outliner#create_webpage()
+function! tnt#outliner#create_webpage()
   " get curront column
   let cursor = getpos('.')[2]
   " get text on the character next to current position.
