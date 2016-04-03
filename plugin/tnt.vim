@@ -3,6 +3,52 @@ if exists('g:loaded_tnt') || &cp
 endif
 let g:loaded_tnt = 1
 
+let g:tnt_prefix_dict = {
+  \ 'i': 'inbox',
+  \ 's': 'sessions',
+  \ 'p': 'projects',
+  \ 'g': 'goals',
+  \ 'h': 'habits',
+  \ 'b': 'budgets',
+  \ 'y': 'pipelines'
+  \ }
+
+function! s:set_tnt_folders(tnt_root)
+  let g:tnt_root = a:tnt_root
+  for folder in values(g:tnt_prefix_dict)
+    if !has_key(g:, 'tnt_' . folder . '_folder')
+      let g:['tnt_' . folder . '_folder'] = g:tnt_root . '/' . folder
+    endif
+  endfor
+endfunction
+
+let s:root = '~/.tnt'
+if !len(g:tnt_root)
+  let g:tnt_root = s:root
+else
+  if g:tnt_root[-1] == '/' | let s:root = g:tnt_root[:-2]
+  else | let s:root = g:tnt_root
+  endif
+endif
+call s:set_tnt_folders(s:root)
+
+function! s:get_folders()
+  return values(g:tnt_prefix_dict)
+endfunction
+
+function! tnt#sink_select_session(path)
+  exe 'edit ' g:tnt_root . '/' . tnt#files#get_apex(a:path)
+endfunction
+
+function! tnt#fzf_get_sessions()
+  call fzf#run({
+  \ 'source': 'cd ' . g:tnt_root . ' && ls -d ' . 
+  \           join(map(s:get_folders(), 'v:val . "/*/"'), ' ')
+  \           . ' ',
+  \ 'sink': function('tnt#sink_select_session'),
+  \ 'options': '-m', 'down': '40%' })
+endfunction
+
 augroup TNT
   autocmd!
   autocmd BufRead,BufNewFile *.tnt*,*.ana* call tnt#outliner#on_open_file()
@@ -124,6 +170,9 @@ nnoremap <silent> <Space>} :TNTVisibleSectionNext<CR>
 command! -nargs=0 TNTVisibleSectionPrev 
   \ call tnt#outliner#search('^$', 'N')
 nnoremap <silent> <Space>{ :TNTVisibleSectionPrev<CR>
+
+nnoremap <silent> <Space>] 
+  \ :<C-U>call tnt#files#open_session_link(getline('.'), col('.'))<CR>
 
 " search for next/prev visible thread
 command! -nargs=0 TNTVisibleThreadNext 
